@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+service Store {
+    rpc StoreBlock(StoreBlockRequest) returns (StoreBlockResponse);
+    rpc HasBlock(HasBlockRequest) returns (HasBlockResponse);
+    rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
+}
+
+message StoreBlockRequest {
+    bytes block = 1;
+    string hash = 2;
+}
+
+message StoreBlockResponse {
+    bool success = 1;
+}
+
+message HasBlockRequest {
+    string hash = 1;
+}
+
+message HasBlockResponse {
+    bool success = 1;
+}
+
+message GetBlockRequest {
+    string hash = 1;
+}
+
+message GetBlockResponse {
+    bool success = 1;
+    bytes block = 2;
+}
