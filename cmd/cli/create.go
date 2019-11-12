@@ -2,12 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
-	"io"
 	"os"
 	"surfs/internal/block"
 )
@@ -35,21 +34,9 @@ func Create(c *cli.Context) error {
 
 	defer f.Close()
 
-	blocks := make(map[string][]byte)
-
-	for {
-		block := make([]byte, 4096)
-		n, err := f.Read(block)
-		if err == io.EOF {
-			hash := base64.StdEncoding.EncodeToString(block[:n])
-			blocks[hash] = block
-			break
-		} else if err != nil {
-			logrus.Fatalf("unable to read file, %v", err)
-		}
-
-		hash := base64.StdEncoding.EncodeToString(block[:n])
-		blocks[hash] = block
+	blocks, err := block.Blocks(f)
+	for _, blk := range blocks {
+		fmt.Printf("block: len =%d, hash =%s", len(blk.Block), blk.Hash)
 	}
 
 	logrus.Info("establishing connection with server...")
