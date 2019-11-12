@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
+	"os"
+	"surfs/internal/block"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
-	"os"
-	"surfs/internal/block"
 )
 
 var SrcRequired = errors.New("must specify a source file")
@@ -34,32 +34,37 @@ func Create(c *cli.Context) error {
 
 	defer f.Close()
 
-	blocks, err := block.Blocks(f)
-	for _, blk := range blocks {
-		fmt.Printf("block: len =%d, hash =%s", len(blk.Block), blk.Hash)
+	// Open the file and split it into blocks. This currently reads the whole file into memory.
+	blks, err := block.Blocks(f)
+	if err != nil {
+		return nil
 	}
 
+	// Create a client to interact with the block store service.
 	logrus.Info("establishing connection with server...")
-	conn, err := grpc.Dial("localhost:7878", grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial("localhost:5678", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		logrus.Fatalf("unable to connect, %v", err)
+		return err
 	}
 	defer conn.Close()
+	client := block.NewStoreClient(conn)
 
+	// Send requests to store all the blocks of the file.
 	logrus.WithFields(logrus.Fields{
-		"src": src,
+		"src":  src,
 		"dest": dest,
 	}).Info("creating file")
 
-	client := block.NewStoreClient(conn)
-
-	_, err = client.StoreBlock(context.Background(), &block.StoreBlockRequest{
-		Block:                []byte("hello"),
-		Hash:                 "asdf",
-	})
-	if err != nil {
-		logrus.Fatalf("unable to store block, %v", err)
+	for _, blk := range blks {
+		if _, err := client.StoreBlock(context.Background(), &block.StoreBlockRequest{
+			Block: blk.Block,
+			Hash:  blk.Hash,
+		}); err != nil {
+			return err
+		}
 	}
+
+	logrus.Info("successfully stored block")
 
 	return nil
 }
