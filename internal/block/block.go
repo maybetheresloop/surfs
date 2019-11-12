@@ -3,6 +3,7 @@ package block
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"io"
 )
 
@@ -11,35 +12,40 @@ type Block struct {
 	Hash string
 }
 
-var DefaultBlockSize = 4096
+var DefaultBlockSize uint64 = 4096
 
-func Blocks(r io.Reader) ([]Block, error) {
+func blockHash(block []byte) string {
+	sha := sha256.Sum256(block)
+	return base64.StdEncoding.EncodeToString(sha[:])
+}
 
-	blocks := make([]Block, 1)
-
+func blocksWithSize(r io.Reader, size uint64) ([]Block, error) {
+	blocks := make([]Block, 0, 1)
 	for {
-		block := make([]byte, DefaultBlockSize)
-
-		n, err := r.Read(block)
-		if err == io.EOF {
-			sha := sha256.Sum256(block[:n])
-			hash := base64.StdEncoding.EncodeToString(sha[:])
-			blocks = append(blocks, Block{
-				Block: block,
-				Hash: hash,
-			})
-			break
-		} else if err != nil {
-			return nil, err
+		block := make([]byte, size)
+		n, err := io.ReadFull(r, block)
+		fmt.Printf("block: %s\n", block)
+		if err != nil {
+			if err == io.EOF {
+				return blocks, nil
+			} else if err == io.ErrUnexpectedEOF {
+				blocks = append(blocks, Block{
+					Block: block[:n],
+					Hash: blockHash(block[:n]),
+				})
+				return blocks, nil
+			} else {
+				return nil, err
+			}
 		}
 
-		sha := sha256.Sum256(block[:n])
-		hash := base64.StdEncoding.EncodeToString(sha[:])
 		blocks = append(blocks, Block{
 			Block: block,
-			Hash: hash,
+			Hash: blockHash(block),
 		})
 	}
+}
 
-	return blocks, nil
+func Blocks(r io.Reader) ([]Block, error) {
+	return blocksWithSize(r, DefaultBlockSize)
 }
