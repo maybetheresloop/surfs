@@ -1,0 +1,37 @@
+syntax = "proto3";
+package meta;
+
+message ReadFileRequest {
+    string filename = 1;
+}
+
+message ReadFileResponse {
+    uint64 version = 1;
+    repeated string hashList = 2;
+}
+
+message ModifyFileRequest {
+    string filename = 1;
+    uint64 version = 2;
+    repeated string hashList = 3;
+}
+
+message ModifyFileResponse {
+    bool success = 1;
+    repeated string missingHashList = 2;
+}
+
+message DeleteFileRequest {
+    string filename = 1;
+    uint64 version = 2;
+}
+
+message DeleteFileResponse {
+    bool success = 1;
+}
+
+service MetadataStore {
+    rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+    rpc ModifyFile(ModifyFileRequest) returns (ModifyFileResponse);
+    rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+}

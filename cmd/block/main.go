@@ -41,20 +41,20 @@ func run(c *cli.Context) error {
 		log.SetLevel(log.TraceLevel)
 	}
 
-	addr := fmt.Sprintf(":%d", port)
-	lis, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("starting block service on %s", addr)
-
 	dataDir := c.String("datadir")
 	if err := validateDataDir(dataDir); err != nil {
 		return err
 	}
 
 	log.Debugf("using data directory: %s", dataDir)
+
+	addr := fmt.Sprintf(":%d", port)
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("starting block store service on %s", addr)
 
 	store := block.NewStore(dataDir)
 
@@ -74,7 +74,7 @@ func main() {
 
 	app.Name = "surfs-block"
 	app.Version = "0.1.0"
-	app.Usage = "Start the Surfs block service."
+	app.Usage = "Start the Surfs block store service."
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -84,7 +84,7 @@ func main() {
 		},
 		cli.UintFlag{
 			Name:  "port, p",
-			Usage: "Specifies the `PORT` the block service is to listen on (default: 5678)",
+			Usage: "Specifies the `PORT` the block store service is to listen on (default: 5678)",
 			Value: 5678,
 		},
 		cli.BoolFlag{

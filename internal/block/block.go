@@ -53,3 +53,7 @@ func blocksWithSize(r io.Reader, size uint64) ([]Block, error) {
 func Blocks(r io.Reader) ([]Block, error) {
 	return blocksWithSize(r, DefaultBlockSize)
 }
+
+func BlocksWithSizeHint(r io.Reader) ([]Block, error) {
+	return nil, nil
+}
