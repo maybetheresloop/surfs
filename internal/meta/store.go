@@ -40,6 +40,7 @@ func NewStore(blockStoreAddr string) (*MetadataStore, error) {
 	}, nil
 }
 
+// Closes the store. This simply closes the underlying gRPC connection.
 func (s *MetadataStore) Close() error {
 	if s.conn == nil {
 		return nil
@@ -67,11 +68,30 @@ func (s *MetadataStore) ReadFile(ctx context.Context, req *ReadFileRequest) (*Re
 
 // Modifies the specified file.
 func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) (*ModifyFileResponse, error) {
+
 	log.WithFields(log.Fields{
 		"filename": req.Filename,
 		"version":  req.Version,
 	}).Debug("modifying file")
 
+	// The new version number must be exactly one more than the current version number. If it is not,
+	// then we reject the modification.
+	oldVersion := s.files[req.Filename].version
+
+	if req.Version != oldVersion+1 {
+
+		log.WithFields(log.Fields{
+			"filename":   req.Filename,
+			"newVersion": req.Version,
+			"oldVersion": oldVersion,
+		}).Debug("new file version does not satisfy criteria")
+
+		return &ModifyFileResponse{Success: false}, nil
+	}
+
+	// Check for missing blocks. If there are any blocks missing in the block store, return a list of
+	// those missing blocks to the client. Otherwise, we have all the required blocks, and it is safe
+	// for us to modify the file metadata to point to the new list of blocks.
 	missing := make([]string, 0, 16)
 	for _, hash := range req.HashList {
 		res, err := s.client.HasBlock(context.Background(), &block.HasBlockRequest{
@@ -113,6 +133,27 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 		"filename": req.Filename,
 		"version":  req.Version,
 	}).Debug("deleting file")
+
+	// The new version number must be exactly one more than the current version number. If it is not,
+	// then we reject the deletion.
+	oldVersion := s.files[req.Filename].version
+
+	if req.Version != oldVersion+1 {
+
+		log.WithFields(log.Fields{
+			"filename":   req.Filename,
+			"newVersion": req.Version,
+			"oldVersion": oldVersion,
+		}).Debug("new file version does not satisfy criteria")
+
+		return &DeleteFileResponse{Success: false}, nil
+	}
+
+	// Deleting the file simply consists of setting its hash list to a nil slice, which is automatically set by
+	// the zero value of stat.
+	s.files[req.Filename] = stat{
+		version: req.Version,
+	}
 
 	return &DeleteFileResponse{Success: true}, nil
 }
