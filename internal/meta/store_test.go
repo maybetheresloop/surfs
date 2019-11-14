@@ -6,6 +6,7 @@ import (
 	"surfs/internal/block"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 )
 
@@ -117,4 +118,32 @@ func TestMetadataStore_ModifyFile(t *testing.T) {
 		Version:  1,
 		HashList: []string{"hash1", "hash2", "hash3", "hash4"},
 	}, &ModifyFileResponse{Success: false, MissingHashList: []string{"hash3", "hash4"}}, t)
+}
+
+func expectDeleteFile(store *MetadataStore, req *DeleteFileRequest, expected *DeleteFileResponse, t *testing.T) {
+	res, err := store.DeleteFile(context.Background(), req)
+
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Success, res.Success)
+}
+
+func TestMetadataStore_DeleteFile(t *testing.T) {
+	mock := &mockClient{blocks: map[string][]byte{}}
+	store := &MetadataStore{
+		files: map[string]stat{
+			"file1": {
+				version:  1,
+				hashList: []string{"hash1"},
+			},
+			"file2": {
+				version:  2,
+				hashList: []string{"hash2"},
+			},
+		},
+		conn:   nil,
+		client: mock,
+	}
+
+	expectDeleteFile(store, &DeleteFileRequest{Filename: "file1", Version: 2}, &DeleteFileResponse{Success: true}, t)
+	expectDeleteFile(store, &DeleteFileRequest{Filename: "file2", Version: 2}, &DeleteFileResponse{Success: false}, t)
 }
