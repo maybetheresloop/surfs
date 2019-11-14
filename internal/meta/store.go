@@ -16,7 +16,9 @@ type MetadataStore struct {
 	files map[string]stat
 
 	conn *grpc.ClientConn
-	bscl block.StoreClient
+
+	// gRPC client to the block store.
+	client block.StoreClient
 }
 
 // Creates a new Metadata store service.
@@ -32,13 +34,17 @@ func NewStore(blockStoreAddr string) (*MetadataStore, error) {
 	fmt.Fprintf(os.Stderr, "connected to block store")
 
 	return &MetadataStore{
-		files: make(map[string]stat),
-		conn:  conn,
-		bscl:  client,
+		files:  make(map[string]stat),
+		conn:   conn,
+		client: client,
 	}, nil
 }
 
 func (s *MetadataStore) Close() error {
+	if s.conn == nil {
+		return nil
+	}
+
 	return s.conn.Close()
 }
 
@@ -50,6 +56,7 @@ func (s *MetadataStore) ReadFile(ctx context.Context, req *ReadFileRequest) (*Re
 		"filename": req.Filename,
 	}).Debug("reading file")
 
+	// Even if the file metadata is not found, returning the zero value still works.
 	st, _ := s.files[req.Filename]
 
 	return &ReadFileResponse{
@@ -65,11 +72,9 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 		"version":  req.Version,
 	}).Debug("modifying file")
 
-	st, _ := s.files[req.Filename]
-
-	missing := make([]string, 0, len(st.hashList))
-	for _, hash := range st.hashList {
-		res, err := s.bscl.HasBlock(context.Background(), &block.HasBlockRequest{
+	missing := make([]string, 0, 16)
+	for _, hash := range req.HashList {
+		res, err := s.client.HasBlock(context.Background(), &block.HasBlockRequest{
 			Hash: hash,
 		})
 		if err != nil {
@@ -86,6 +91,10 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 			"filename": req.Filename,
 			"version":  req.Version,
 		}).Debug("modified file successfully")
+
+		s.files[req.Filename] = stat{
+			hashList: req.HashList,
+		}
 
 		return &ModifyFileResponse{Success: true}, nil
 	}
