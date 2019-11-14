@@ -20,3 +20,6 @@ clean:
 
 test:
 	go test ${MODULE}/...
+
+cov:
+	go test ${MODULE}/... --coverprofile coverage.txt --covermode atomic

@@ -44,17 +44,10 @@ func expectReadFile(store *MetadataStore, filename string, expected *ReadFileRes
 	}
 
 	res, err := store.ReadFile(context.Background(), req)
-	if err != nil {
-		t.Fatalf("error reading file, %v", err)
-	}
+	assert.Nil(t, err)
 
-	if res.Version != expected.Version {
-		t.Fatalf("incorrect version: expected =%d, got =%d", expected.Version, res.Version)
-	}
-
-	if !reflect.DeepEqual(expected.HashList, res.HashList) {
-		t.Fatalf("incorrect hashlist: expected =%v, got =%v", expected.HashList, res.HashList)
-	}
+	assert.Equal(t, res.Version, expected.Version)
+	assert.ElementsMatch(t, expected.HashList, res.HashList)
 }
 
 func TestMetadataStore_ReadFile(t *testing.T) {
