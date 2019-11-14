@@ -37,15 +37,11 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "listen\n")
-
 	store, err := meta.NewStore(blockStoreAddr)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
-
-	fmt.Fprintf(os.Stderr, "create meta server\n")
 
 	s := grpc.NewServer()
 	meta.RegisterMetadataStoreServer(s, store)
