@@ -54,6 +54,37 @@ func Blocks(r io.Reader) ([]Block, error) {
 	return blocksWithSize(r, DefaultBlockSize)
 }
 
+// Divides the contents of the specified reader into blocks of the specified size. A slice of block-hash pairs
+// are returned.
+func makeBlocksWithSize(r io.Reader, size uint64) ([][]byte, []string, error) {
+	blocks := make([][]byte, 0, 1)
+	hashes := make([]string, 0, 1)
+	for {
+		block := make([]byte, size)
+		n, err := io.ReadFull(r, block)
+		if err != nil {
+			if err == io.EOF {
+				return blocks, hashes, nil
+			} else if err == io.ErrUnexpectedEOF {
+				blocks = append(blocks, block[:n])
+				hashes = append(hashes, blockHash(block[:n]))
+				return blocks, hashes, nil
+			} else {
+				return nil, nil, err
+			}
+		}
+
+		blocks = append(blocks, block)
+		hashes = append(hashes, blockHash(block))
+	}
+}
+
+// Divides the contents of the specified reader into blocks of 4KB. A slice of block-hash pairs
+// are returned.
+func MakeBlocks(r io.Reader) ([][]byte, []string, error) {
+	return makeBlocksWithSize(r, DefaultBlockSize)
+}
+
 func BlocksWithSizeHint(r io.Reader) ([]Block, error) {
 	return nil, nil
 }
