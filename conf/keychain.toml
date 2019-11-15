@@ -1,0 +1,7 @@
+[block-store]
+host = "localhost"
+port = 5678
+
+[metadata-store]
+host = "localhost"
+port = 5679

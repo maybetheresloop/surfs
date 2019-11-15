@@ -2,8 +2,6 @@ package meta
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"surfs/internal/block"
 
 	"google.golang.org/grpc"
@@ -23,7 +21,8 @@ type MetadataStore struct {
 
 // Creates a new Metadata store service.
 func NewStore(blockStoreAddr string) (*MetadataStore, error) {
-	fmt.Fprintf(os.Stderr, "connecting to block store")
+
+	log.Debugf("Connecting to block store at %s...", blockStoreAddr)
 
 	conn, err := grpc.Dial(blockStoreAddr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -31,7 +30,7 @@ func NewStore(blockStoreAddr string) (*MetadataStore, error) {
 	}
 	client := block.NewStoreClient(conn)
 
-	fmt.Fprintf(os.Stderr, "connected to block store")
+	log.Debug("Connected to block store.")
 
 	return &MetadataStore{
 		files:  make(map[string]stat),
@@ -55,7 +54,7 @@ func (s *MetadataStore) Close() error {
 func (s *MetadataStore) ReadFile(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
 	log.WithFields(log.Fields{
 		"filename": req.Filename,
-	}).Debug("reading file")
+	}).Debug("Reading file...")
 
 	// Even if the file metadata is not found, returning the zero value still works.
 	st, _ := s.files[req.Filename]
@@ -72,7 +71,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 	log.WithFields(log.Fields{
 		"filename": req.Filename,
 		"version":  req.Version,
-	}).Debug("modifying file")
+	}).Debug("Modifying file...")
 
 	// The new version number must be exactly one more than the current version number. If it is not,
 	// then we reject the modification.
@@ -84,7 +83,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 			"filename":   req.Filename,
 			"newVersion": req.Version,
 			"oldVersion": oldVersion,
-		}).Debug("new file version does not satisfy criteria")
+		}).Debug("Did not modify file; invalid new file version.")
 
 		return &ModifyFileResponse{Success: false}, nil
 	}
@@ -110,7 +109,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 		log.WithFields(log.Fields{
 			"filename": req.Filename,
 			"version":  req.Version,
-		}).Debug("modified file successfully")
+		}).Debug("Modified file successfully.")
 
 		s.files[req.Filename] = stat{
 			hashList: req.HashList,
@@ -122,7 +121,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 	log.WithFields(log.Fields{
 		"filename": req.Filename,
 		"version":  req.Version,
-	}).Debugf("did not modify file successfully; missing %d blocks", len(missing))
+	}).Debugf("Did not modify file successfully; missing %d block(s).", len(missing))
 
 	return &ModifyFileResponse{Success: false, MissingHashList: missing}, nil
 }
@@ -132,7 +131,7 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 	log.WithFields(log.Fields{
 		"filename": req.Filename,
 		"version":  req.Version,
-	}).Debug("deleting file")
+	}).Debug("Deleting file...")
 
 	// The new version number must be exactly one more than the current version number. If it is not,
 	// then we reject the deletion.
@@ -144,7 +143,7 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 			"filename":   req.Filename,
 			"newVersion": req.Version,
 			"oldVersion": oldVersion,
-		}).Debug("new file version does not satisfy criteria")
+		}).Debug("Did not delete file: invalid new file version.")
 
 		return &DeleteFileResponse{Success: false}, nil
 	}
@@ -154,6 +153,11 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 	s.files[req.Filename] = stat{
 		version: req.Version,
 	}
+
+	log.WithFields(log.Fields{
+		"filename": req.Filename,
+		"version":  req.Version,
+	}).Debug("Deleted file successfully.")
 
 	return &DeleteFileResponse{Success: true}, nil
 }

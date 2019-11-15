@@ -14,6 +14,9 @@ import (
 )
 
 func run(c *cli.Context) error {
+
+	log.SetLevel(log.DebugLevel)
+
 	port := c.Uint64("port")
 	if port == 0 {
 		return errors.New("must specify a valid port")

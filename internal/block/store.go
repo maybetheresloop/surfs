@@ -59,8 +59,9 @@ func (s *Store) StoreBlock(ctx context.Context, req *StoreBlockRequest) (*StoreB
 }
 
 func (s *Store) HasBlock(ctx context.Context, req *HasBlockRequest) (*HasBlockResponse, error) {
+	_, ok := s.blocks[req.Hash]
 	return &HasBlockResponse{
-		Success: true,
+		Success: ok,
 	}, nil
 }
 
