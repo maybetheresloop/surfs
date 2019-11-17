@@ -48,6 +48,9 @@ func main() {
 			Usage:  "Upload a file to the store",
 			Action: Create,
 		},
+		//{
+		//	Name: ""
+		//},
 	}
 
 	if err := app.Run(os.Args); err != nil {

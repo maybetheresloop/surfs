@@ -12,7 +12,7 @@ type Block struct {
 	Hash  string
 }
 
-var DefaultBlockSize uint64 = 4096
+var DefaultBlockSize uint64 = 64
 
 // Calculates the Base64-encoded SHA256 hash of the specified block.
 func blockHash(block []byte) string {

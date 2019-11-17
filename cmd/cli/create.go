@@ -14,9 +14,13 @@ import (
 	"github.com/urfave/cli"
 )
 
+const MaxAttempts = 10
+
 var SrcRequired = errors.New("must specify a source file")
 var DestRequired = errors.New("must specify a destination path")
+var ExceededMaxRetries = errors.New("exceeded max retries")
 
+// Create creates a file in the Surfs
 func Create(c *cli.Context) error {
 
 	log.SetLevel(log.DebugLevel)
@@ -73,7 +77,10 @@ func Create(c *cli.Context) error {
 
 	blockClient := block.NewStoreClient(blockConn)
 
-	log.Debug("calling ReadFile() RPC...")
+	// Retrieve the current version of the file to be created/updated from the metadata store.
+	// For us to be able to update the file, we must send a request specifying the version number
+	// to be exactly one more than the version number retrieved from the metadata store.
+	log.Debug("Checking current file version...")
 
 	readReq := &meta.ReadFileRequest{Filename: dest}
 	readRes, err := metaClient.ReadFile(context.Background(), readReq)
@@ -92,53 +99,56 @@ func Create(c *cli.Context) error {
 		HashList: hashes,
 	}
 
-	// Call the metadata store's ModifyFile() RPC to request an update of the hash list.
-	// If the ModifyFile RPC() returns with success, then we are done.
-	modRes, err := metaClient.ModifyFile(context.Background(), modReq)
-	if err != nil {
-		return err
-	}
+	attempts := 0
 
-	if modRes.Success {
-		log.WithFields(log.Fields{
-			"src":  src,
-			"dest": dest,
-		}).Debug("successfully created file")
-
-		return nil
-	}
-
-	// Otherwise, the ModifyFile() RPC returns a list of hashes whose corresponding
-	// blocks are missing from the block store. We upload those blocks to the block
-	// store and call ModifyFile again.
-	log.Debugf("block store is missing %d blocks, uploading them", len(modRes.MissingHashList))
-
-	for _, hash := range modRes.MissingHashList {
-		req := &block.StoreBlockRequest{
-			Block: blocks[hash],
-			Hash:  hash,
-		}
-
-		_, err := blockClient.StoreBlock(context.Background(), req)
+	for {
+		// Call the metadata store's ModifyFile() RPC to request an update of the hash list.
+		// If the ModifyFile RPC() returns with success, then we are done.
+		modRes, err := metaClient.ModifyFile(context.Background(), modReq)
 		if err != nil {
 			return err
 		}
+
+		if modRes.Success {
+			log.WithFields(log.Fields{
+				"src":  src,
+				"dest": dest,
+			}).Debug("Successfully created file.")
+
+			return nil
+		}
+
+		attempts++
+
+		if attempts >= MaxAttempts {
+			log.Errorf("Failed to upload file after %d attempts, aborting.", MaxAttempts)
+			return ExceededMaxRetries
+		}
+
+		// Otherwise, the ModifyFile() RPC returns a list of hashes whose corresponding
+		// blocks are missing from the block store. If the list is nil, then we have the wrong
+		// number and leave it to the user to try again.
+		if modRes.MissingHashList == nil {
+			log.Errorf("Version conflict, please try again.")
+			return VersionConflict
+		}
+
+		// If the list is not empty, we upload the required blocks to the block store and call
+		// ModifyFile again.
+		log.Debugf("Block store is missing %d blocks, uploading them...", len(modRes.MissingHashList))
+
+		for _, hash := range modRes.MissingHashList {
+			req := &block.StoreBlockRequest{
+				Block: blocks[hash],
+				Hash:  hash,
+			}
+
+			_, err := blockClient.StoreBlock(context.Background(), req)
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 
-	// All blocks have been stored, try again.
-	//modRes, err = metaClient.ModifyFile(context.Background(), modReq)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if modRes.Success {
-	//	log.WithFields(log.Fields{
-	//		"src":  src,
-	//		"dest": dest,
-	//	}).Debug("successfully created file")
-	//
-	//	return nil
-	//}
-
-	return nil
 }

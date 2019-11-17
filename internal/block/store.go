@@ -26,13 +26,15 @@ func NewStore(dataDir string) *Store {
 }
 
 func (s *Store) StoreBlock(ctx context.Context, req *StoreBlockRequest) (*StoreBlockResponse, error) {
-	log.WithFields(log.Fields{
-		"hash": req.Hash,
-		"size": len(req.Block),
-	}).Debug("storing block")
 
 	base := fmt.Sprintf("%s%d", FilePrefix, s.counter)
 	path := filepath.Join(s.dataDir, base)
+
+	log.WithFields(log.Fields{
+		"hash": req.Hash,
+		"path": path,
+		"size": len(req.Block),
+	}).Debug("Storing block...")
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -53,6 +55,8 @@ func (s *Store) StoreBlock(ctx context.Context, req *StoreBlockRequest) (*StoreB
 		path: path,
 	}
 
+	s.counter += 1
+
 	return &StoreBlockResponse{
 		Success: true,
 	}, nil
@@ -66,8 +70,23 @@ func (s *Store) HasBlock(ctx context.Context, req *HasBlockRequest) (*HasBlockRe
 }
 
 func (s *Store) GetBlock(ctx context.Context, req *GetBlockRequest) (*GetBlockResponse, error) {
+	df, ok := s.blocks[req.Hash]
+
+	if !ok {
+		return &GetBlockResponse{
+			Success: ok,
+			Block:   nil,
+		}, nil
+	}
+
+	b, err := df.readAll()
+	if err != nil {
+		return nil, err
+	}
+
 	return &GetBlockResponse{
-		Success: false,
-		Block:   nil,
+		Success: true,
+		Block:   b,
 	}, nil
+
 }
