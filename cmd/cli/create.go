@@ -42,6 +42,8 @@ func Create(c *cli.Context) error {
 		return DestRequired
 	}
 
+	// Clean the destination filepath.
+
 	f, err := os.Open(src)
 	if err != nil {
 		return err

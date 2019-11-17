@@ -3,31 +3,46 @@ package block
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const FilePrefix = "blk_"
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 type Store struct {
 	blocks  map[string]datafile
+	engine  engine
 	dataDir string
 	counter uint64
 }
 
-func NewStore(dataDir string) *Store {
+func NewStore(dataDir string) (*Store, error) {
+
+	engine, err := openKeychainEngine("block.keychain")
+	if err != nil {
+		return nil, err
+	}
+
 	return &Store{
 		blocks:  make(map[string]datafile),
+		engine:  engine,
 		dataDir: dataDir,
 		counter: 0,
-	}
+	}, nil
 }
 
 func (s *Store) StoreBlock(ctx context.Context, req *StoreBlockRequest) (*StoreBlockResponse, error) {
 
-	base := fmt.Sprintf("%s%d", FilePrefix, s.counter)
+	// This could totally cause collisions, need to fix this later.
+	base := fmt.Sprintf("%s%d", FilePrefix, rand.Uint64())
 	path := filepath.Join(s.dataDir, base)
 
 	log.WithFields(log.Fields{
@@ -54,8 +69,6 @@ func (s *Store) StoreBlock(ctx context.Context, req *StoreBlockRequest) (*StoreB
 	s.blocks[req.Hash] = datafile{
 		path: path,
 	}
-
-	s.counter += 1
 
 	return &StoreBlockResponse{
 		Success: true,
