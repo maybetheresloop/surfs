@@ -59,10 +59,11 @@ func main() {
 			Usage:  "Delete a file from the store.",
 			Action: Delete,
 		},
-
-		//{
-		//	Name: ""
-		//},
+		{
+			Name:   "read",
+			Usage:  "Retrieve a file from Surfs.",
+			Action: read,
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {

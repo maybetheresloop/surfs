@@ -50,7 +50,7 @@ func Create(c *cli.Context) error {
 	defer f.Close()
 
 	// Open the file and split it into blocks. This currently reads the whole file into memory.
-	blocks, err := block.MakeBlocks(f)
+	blocks, hashes, err := block.MakeBlocks(f)
 	if err != nil {
 		return err
 	}
@@ -86,11 +86,6 @@ func Create(c *cli.Context) error {
 	readRes, err := metaClient.ReadFile(context.Background(), readReq)
 	if err != nil {
 		return err
-	}
-
-	hashes := make([]string, 0, len(blocks))
-	for k, _ := range blocks {
-		hashes = append(hashes, k)
 	}
 
 	modReq := &meta.ModifyFileRequest{
