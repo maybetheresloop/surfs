@@ -93,17 +93,39 @@ func TestMetadataStore_ModifyFile(t *testing.T) {
 		"hash2": []byte("block2"),
 	}}
 	store := &MetadataStore{
-		files:  map[string]stat{},
+		files: map[string]stat{
+			"file1": {
+				hashList: []string{"hash1"},
+				version:  1,
+			},
+		},
 		conn:   nil,
 		client: mock,
 	}
 
+	// *********************************************
+	// * TEST #1: Test modifying an existing file. *
+	// *********************************************
+
 	// Test all blocks found.
 	expectModifyFile(store, &ModifyFileRequest{
 		Filename: "file1",
-		Version:  1,
+		Version:  2,
 		HashList: []string{"hash1", "hash2"},
 	}, &ModifyFileResponse{Success: true, MissingHashList: nil}, t)
+
+	// Expect correct modifications.
+	stat := store.files["file1"]
+	assert.Equal(t, stat.version, uint64(2))
+	assert.Equal(t, stat.hashList, []string{"hash1", "hash2"})
+
+	// ***************
+	// * END TEST #1 *
+	// ***************
+
+	// **************************************
+	// * TEST #2: Test creating a new file. *
+	// **************************************
 
 	// Test missing blocks in block store.
 	expectModifyFile(store, &ModifyFileRequest{
@@ -111,6 +133,10 @@ func TestMetadataStore_ModifyFile(t *testing.T) {
 		Version:  1,
 		HashList: []string{"hash1", "hash2", "hash3", "hash4"},
 	}, &ModifyFileResponse{Success: false, MissingHashList: []string{"hash3", "hash4"}}, t)
+
+	// ***************
+	// * END TEST #2 *
+	// ***************
 }
 
 func expectDeleteFile(store *MetadataStore, req *DeleteFileRequest, expected *DeleteFileResponse, t *testing.T) {
@@ -139,4 +165,27 @@ func TestMetadataStore_DeleteFile(t *testing.T) {
 
 	expectDeleteFile(store, &DeleteFileRequest{Filename: "file1", Version: 2}, &DeleteFileResponse{Success: true}, t)
 	expectDeleteFile(store, &DeleteFileRequest{Filename: "file2", Version: 2}, &DeleteFileResponse{Success: false}, t)
+}
+
+func expectGetVersion(store *MetadataStore, req *GetVersionRequest, expected *GetVersionResponse, t *testing.T) {
+	res, err := store.GetVersion(context.Background(), req)
+	assert.Nil(t, err)
+
+	assert.Equal(t, expected.Version, res.Version)
+}
+
+func TestMetadataStore_GetVersion(t *testing.T) {
+	store := &MetadataStore{
+		files: map[string]stat{
+			"file1": {
+				version:  1,
+				hashList: nil,
+			},
+		},
+		conn:   nil,
+		client: nil,
+	}
+
+	expectGetVersion(store, &GetVersionRequest{Filename: "file1"}, &GetVersionResponse{Version: 1}, t)
+	expectGetVersion(store, &GetVersionRequest{Filename: "file2"}, &GetVersionResponse{Version: 0}, t)
 }

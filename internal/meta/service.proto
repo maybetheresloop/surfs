@@ -30,8 +30,17 @@ message DeleteFileResponse {
     bool success = 1;
 }
 
+message GetVersionRequest {
+    string filename = 1;
+}
+
+message GetVersionResponse {
+    uint64 version = 1;
+}
+
 service MetadataStore {
     rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
     rpc ModifyFile(ModifyFileRequest) returns (ModifyFileResponse);
     rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+    rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -41,19 +41,31 @@ func main() {
 		},
 	}
 
+	app.Flags = flags
+
 	app.Commands = []cli.Command{
 		{
 			Name:   "create",
-			Flags:  flags,
 			Usage:  "Upload a file to the store",
 			Action: Create,
 		},
+		{
+			Name:   "get-version",
+			Usage:  "Get the current version of a file.",
+			Action: GetVersion,
+		},
+		{
+			Name:   "delete",
+			Usage:  "Delete a file from the store.",
+			Action: Delete,
+		},
+
 		//{
 		//	Name: ""
 		//},
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		logrus.Fatalf("error, %v", err)
+		log.Fatalf("error, %v", err)
 	}
 }

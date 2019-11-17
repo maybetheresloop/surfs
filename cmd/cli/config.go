@@ -21,7 +21,7 @@ type config struct {
 }
 
 func getConfig(c *cli.Context) (*config, error) {
-	path := c.String("config")
+	path := c.GlobalString("config")
 	var conf config
 
 	if _, err := toml.DecodeFile(path, &conf); err != nil {

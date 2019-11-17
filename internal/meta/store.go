@@ -113,6 +113,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 
 		s.files[req.Filename] = stat{
 			hashList: req.HashList,
+			version:  req.Version,
 		}
 
 		return &ModifyFileResponse{Success: true}, nil
@@ -160,4 +161,18 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 	}).Debug("Deleted file successfully.")
 
 	return &DeleteFileResponse{Success: true}, nil
+}
+
+func (s *MetadataStore) GetVersion(ctx context.Context, req *GetVersionRequest) (*GetVersionResponse, error) {
+
+	version := s.files[req.Filename].version
+
+	log.WithFields(log.Fields{
+		"version": version,
+	}).Debug("Found file version.")
+
+	// If the filename doesn't exist, we are fine because the zero value of stat{} will have version = 0.
+	return &GetVersionResponse{
+		Version: version,
+	}, nil
 }

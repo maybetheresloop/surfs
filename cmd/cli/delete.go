@@ -46,10 +46,11 @@ func Delete(c *cli.Context) error {
 	if readRes.HashList == nil {
 		log.Error("File not found.")
 		fmt.Println("Not found")
+		return NotFound
 	}
 
 	delReq := &meta.DeleteFileRequest{
-		Filename: "fp",
+		Filename: fp,
 		Version:  readRes.Version + 1,
 	}
 
@@ -63,7 +64,7 @@ func Delete(c *cli.Context) error {
 		return VersionConflict
 	}
 
-	log.Error("Deleted file successfully.")
+	log.Debug("Deleted file successfully.")
 	fmt.Println("OK")
 
 	return nil
