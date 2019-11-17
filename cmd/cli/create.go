@@ -52,7 +52,7 @@ func Create(c *cli.Context) error {
 	defer f.Close()
 
 	// Open the file and split it into blocks. This currently reads the whole file into memory.
-	blocks, hashes, err := block.MakeBlocks(f)
+	blockMap, err := block.MakeBlocks(f)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func Create(c *cli.Context) error {
 	modReq := &meta.ModifyFileRequest{
 		Filename: dest,
 		Version:  readRes.Version + 1,
-		HashList: hashes,
+		HashList: blockMap.Hashes,
 	}
 
 	attempts := 0
@@ -136,7 +136,7 @@ func Create(c *cli.Context) error {
 
 		for _, hash := range modRes.MissingHashList {
 			req := &block.StoreBlockRequest{
-				Block: blocks[hash],
+				Block: blockMap.Blocks[hash],
 				Hash:  hash,
 			}
 

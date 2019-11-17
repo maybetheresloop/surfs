@@ -6,13 +6,12 @@ import (
 	"io"
 )
 
-// A pair of a block's contents and its Base64-encoded SHA256 hash.
-type Block struct {
-	Block []byte
-	Hash  string
+type Map struct {
+	Hashes []string
+	Blocks map[string][]byte
 }
 
-var DefaultBlockSize uint64 = 64
+const DefaultBlockSize uint64 = 64
 
 // Calculates the Base64-encoded SHA256 hash of the specified block.
 func blockHash(block []byte) string {
@@ -20,74 +19,37 @@ func blockHash(block []byte) string {
 	return base64.StdEncoding.EncodeToString(sha[:])
 }
 
-// Divides the contents of the specified reader into blocks of the specified size. A slice of block-hash pairs
-// are returned.
-func blocksWithSize(r io.Reader, size uint64) ([]Block, error) {
-	blocks := make([]Block, 0, 1)
-
+// Divides the contents of the specified reader into blocks of the specified size. A map of hashes to blocks is
+// returned.
+func makeBlocksWithSize(r io.Reader, size uint64) (*Map, error) {
+	m := &Map{
+		Blocks: make(map[string][]byte),
+		Hashes: make([]string, 0, 64),
+	}
 	for {
 		block := make([]byte, size)
 		n, err := io.ReadFull(r, block)
 		if err != nil {
 			if err == io.EOF {
-				return blocks, nil
+				return m, nil
 			} else if err == io.ErrUnexpectedEOF {
-				blocks = append(blocks, Block{
-					Block: block[:n],
-					Hash:  blockHash(block[:n]),
-				})
-				return blocks, nil
+				hash := blockHash(block[:n])
+				m.Blocks[hash] = block[:n]
+				m.Hashes = append(m.Hashes, hash)
+				return m, nil
 			} else {
 				return nil, err
 			}
 		}
 
-		blocks = append(blocks, Block{
-			Block: block,
-			Hash:  blockHash(block),
-		})
-	}
-}
-
-// Divides the contents of the specified reader into blocks of 4KB. A slice of block-hash pairs
-// are returned.
-func Blocks(r io.Reader) ([]Block, error) {
-	return blocksWithSize(r, DefaultBlockSize)
-}
-
-// Divides the contents of the specified reader into blocks of the specified size. A map of hashes to blocks is
-// returned.
-func makeBlocksWithSize(r io.Reader, size uint64) (map[string][]byte, []string, error) {
-	blocks := make(map[string][]byte)
-	hashes := make([]string, 0, 64)
-	for {
-		block := make([]byte, size)
-		n, err := io.ReadFull(r, block)
-		if err != nil {
-			if err == io.EOF {
-				return blocks, hashes, nil
-			} else if err == io.ErrUnexpectedEOF {
-				hash := blockHash(block[:n])
-				blocks[hash] = block[:n]
-				hashes = append(hashes, hash)
-				return blocks, hashes, nil
-			} else {
-				return nil, nil, err
-			}
-		}
-
 		hash := blockHash(block)
-		blocks[hash] = block
-		hashes = append(hashes, hash)
+		m.Blocks[hash] = block
+		m.Hashes = append(m.Hashes, hash)
 	}
 }
 
 // Divides the contents of the specified reader into blocks of 4KB. A map of hashes to block data
 // and a slice of the hashes in order are returned.
-func MakeBlocks(r io.Reader) (map[string][]byte, []string, error) {
+func MakeBlocks(r io.Reader) (*Map, error) {
 	return makeBlocksWithSize(r, DefaultBlockSize)
-}
-
-func BlocksWithSizeHint(r io.Reader) ([]Block, error) {
-	return nil, nil
 }

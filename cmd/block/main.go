@@ -56,13 +56,16 @@ func run(c *cli.Context) error {
 
 	log.Debugf("starting block store service on %s", addr)
 
-	store := block.NewStore(dataDir)
+	store, err := block.NewStore(dataDir)
+	if err != nil {
+		return err
+	}
 
 	s := grpc.NewServer()
 	block.RegisterStoreServer(s, store)
 
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		return err
 	}
 
 	return nil
