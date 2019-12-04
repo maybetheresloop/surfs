@@ -82,12 +82,12 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "datadir, D",
-			Usage: "Specifies the `DIR` where the block store files are located (default: ./data).",
+			Usage: "Specifies the `DIR` where the block store files are located",
 			Value: "./data",
 		},
 		cli.UintFlag{
 			Name:  "port, p",
-			Usage: "Specifies the `PORT` the block store service is to listen on (default: 5678)",
+			Usage: "Specifies the `PORT` the block store service is to listen on",
 			Value: 5678,
 		},
 		cli.BoolFlag{
