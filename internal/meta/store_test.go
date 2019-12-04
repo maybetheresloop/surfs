@@ -55,10 +55,10 @@ func TestMetadataStore_ReadFile(t *testing.T) {
 	store := &MetadataStore{
 		conn:   nil,
 		client: mock,
-		engine: NewMapEngine(),
+		engine: newMapEngine(),
 	}
 
-	assert.Nil(t, store.engine.SetFileMetadata("file1", Stat{
+	assert.Nil(t, store.engine.setFileMetadata("file1", Stat{
 		hashList: []string{"hash1", "hash2"},
 		version:  1,
 	}))
@@ -81,7 +81,7 @@ func expectModifyFile(store *MetadataStore, req *ModifyFileRequest, expected *Mo
 		t.Fatalf("incorrect missing hash list: expected =%v, got =%v", expected.MissingHashList, res.MissingHashList)
 	}
 
-	stat, _, err := store.engine.GetFileMetadata(req.Filename)
+	stat, _, err := store.engine.getFileMetadata(req.Filename)
 	assert.Nil(t, err)
 	if expected.Success && !reflect.DeepEqual(stat.hashList, req.HashList) {
 		t.Fatalf("incorrect hash list after modify: expected =%v, got =%v", req.HashList, stat.hashList)
@@ -95,8 +95,8 @@ func TestMetadataStore_ModifyFile(t *testing.T) {
 		"hash2": []byte("block2"),
 	}}
 
-	engine := NewMapEngine()
-	assert.Nil(t, engine.SetFileMetadata("file1", Stat{
+	engine := newMapEngine()
+	assert.Nil(t, engine.setFileMetadata("file1", Stat{
 		hashList: []string{"hash1"},
 		version:  1,
 	}))
@@ -119,7 +119,7 @@ func TestMetadataStore_ModifyFile(t *testing.T) {
 	}, &ModifyFileResponse{Success: true, MissingHashList: nil}, t)
 
 	// Expect correct modifications.
-	stat, _, err := store.engine.GetFileMetadata("file1")
+	stat, _, err := store.engine.getFileMetadata("file1")
 	assert.Nil(t, err)
 
 	assert.Equal(t, stat.version, uint64(2))
@@ -155,13 +155,13 @@ func expectDeleteFile(store *MetadataStore, req *DeleteFileRequest, expected *De
 func TestMetadataStore_DeleteFile(t *testing.T) {
 	mock := &mockClient{blocks: map[string][]byte{}}
 
-	engine := NewMapEngine()
-	assert.Nil(t, engine.SetFileMetadata("file1", Stat{
+	engine := newMapEngine()
+	assert.Nil(t, engine.setFileMetadata("file1", Stat{
 		version:  1,
 		hashList: []string{"hash1"},
 	}))
 
-	assert.Nil(t, engine.SetFileMetadata("file2", Stat{
+	assert.Nil(t, engine.setFileMetadata("file2", Stat{
 		version:  2,
 		hashList: []string{"hash2"},
 	}))
@@ -184,8 +184,8 @@ func expectGetVersion(store *MetadataStore, req *GetVersionRequest, expected *Ge
 }
 
 func TestMetadataStore_GetVersion(t *testing.T) {
-	engine := NewMapEngine()
-	assert.Nil(t, engine.SetFileMetadata("file1", Stat{
+	engine := newMapEngine()
+	assert.Nil(t, engine.setFileMetadata("file1", Stat{
 		version:  1,
 		hashList: nil,
 	}))

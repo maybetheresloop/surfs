@@ -1,7 +1,9 @@
 [block-store]
 host = "localhost"
 port = 5678
+dataDir = "./data"
 
 [metadata-store]
 host = "localhost"
 port = 5679
+dataDir = "./data"

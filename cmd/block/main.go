@@ -7,12 +7,39 @@ import (
 	"os"
 	"surfs/internal/block"
 
+	"github.com/BurntSushi/toml"
+
 	"google.golang.org/grpc"
 
 	"github.com/urfave/cli"
 
 	log "github.com/sirupsen/logrus"
 )
+
+type blockStore struct {
+	Host    string
+	Port    uint
+	DataDir string
+}
+
+type config struct {
+	BlockStore blockStore `toml:"block-store"`
+}
+
+func defaultConf() config {
+	return config{
+		BlockStore: blockStore{
+			Host:    "localhost",
+			Port:    5678,
+			DataDir: "data",
+		},
+	}
+}
+
+func parseConfigFromFile(name string, conf *config) error {
+	_, err := toml.DecodeFile(name, &conf)
+	return err
+}
 
 // Checks that a given path is a directory.
 func validateDataDir(dataDir string) error {
@@ -28,9 +55,24 @@ func validateDataDir(dataDir string) error {
 
 func run(c *cli.Context) error {
 
-	port := c.Uint("port")
-	if port == 0 {
-		return errors.New("must specify a valid port")
+	var conf config
+	confPath := c.Args().First()
+	if confPath != "" {
+		if err := parseConfigFromFile(confPath, &conf); err != nil {
+			return err
+		}
+	}
+
+	if port := c.Uint("port"); port != 0 {
+		conf.BlockStore.Port = port
+	}
+
+	if dataDir := c.String("datadir"); dataDir != "" {
+		if err := validateDataDir(dataDir); err != nil {
+			return err
+		}
+
+		conf.BlockStore.DataDir = dataDir
 	}
 
 	if c.Bool("V") {
@@ -41,14 +83,9 @@ func run(c *cli.Context) error {
 		log.SetLevel(log.TraceLevel)
 	}
 
-	dataDir := c.String("datadir")
-	if err := validateDataDir(dataDir); err != nil {
-		return err
-	}
+	log.Debugf("using data directory: %s", conf.BlockStore.DataDir)
 
-	log.Debugf("using data directory: %s", dataDir)
-
-	addr := fmt.Sprintf(":%d", port)
+	addr := fmt.Sprintf(":%d", conf.BlockStore.Port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -56,7 +93,7 @@ func run(c *cli.Context) error {
 
 	log.Debugf("starting block store service on %s", addr)
 
-	store, err := block.NewStore(dataDir)
+	store, err := block.NewStore(conf.BlockStore.DataDir)
 	if err != nil {
 		return err
 	}

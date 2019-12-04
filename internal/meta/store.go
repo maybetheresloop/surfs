@@ -10,16 +10,14 @@ import (
 )
 
 type MetadataStore struct {
-	// Map from filename to hash list.
-	//files map[string]Stat
-
 	// Key-value storage engine for file metadata.
 	engine engine
 
-	conn *grpc.ClientConn
-
 	// gRPC client to the block store.
 	client block.StoreClient
+
+	// Underlying gRPC connection for block store client.
+	conn *grpc.ClientConn
 }
 
 // Creates a new Metadata store service.
@@ -39,7 +37,7 @@ func NewStore(blockStoreAddr string) (*MetadataStore, error) {
 		//files:  make(map[string]Stat),
 		conn:   conn,
 		client: client,
-		engine: NewMapEngine(),
+		engine: newMapEngine(),
 	}, nil
 }
 
@@ -62,7 +60,7 @@ func (s *MetadataStore) ReadFile(ctx context.Context, req *ReadFileRequest) (*Re
 
 	// Even if the file metadata is not found, returning the zero value still works.
 	//st, _ := s.files[req.Filename]
-	st, _, err := s.engine.GetFileMetadata(req.Filename)
+	st, _, err := s.engine.getFileMetadata(req.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +82,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 	// The new version number must be exactly one more than the current version number. If it is not,
 	// then we reject the modification.
 	//oldVersion := s.files[req.Filename].version
-	st, _, err := s.engine.GetFileMetadata(req.Filename)
+	st, _, err := s.engine.getFileMetadata(req.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +127,7 @@ func (s *MetadataStore) ModifyFile(ctx context.Context, req *ModifyFileRequest) 
 		//	hashList: req.HashList,
 		//	version:  req.Version,
 		//}
-		if err := s.engine.SetFileMetadata(req.Filename, Stat{
+		if err := s.engine.setFileMetadata(req.Filename, Stat{
 			hashList: req.HashList,
 			version:  req.Version,
 		}); err != nil {
@@ -157,7 +155,7 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 	// The new version number must be exactly one more than the current version number. If it is not,
 	// then we reject the deletion.
 	//oldVersion := s.files[req.Filename].version
-	st, _, err := s.engine.GetFileMetadata(req.Filename)
+	st, _, err := s.engine.getFileMetadata(req.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +178,7 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 	//s.files[req.Filename] = Stat{
 	//	version: req.Version,
 	//}
-	if err := s.engine.SetFileMetadata(req.Filename, Stat{
+	if err := s.engine.setFileMetadata(req.Filename, Stat{
 		version: req.Version,
 	}); err != nil {
 		return nil, err
@@ -197,7 +195,7 @@ func (s *MetadataStore) DeleteFile(ctx context.Context, req *DeleteFileRequest) 
 func (s *MetadataStore) GetVersion(ctx context.Context, req *GetVersionRequest) (*GetVersionResponse, error) {
 
 	//version := s.files[req.Filename].version
-	st, _, err := s.engine.GetFileMetadata(req.Filename)
+	st, _, err := s.engine.getFileMetadata(req.Filename)
 	if err != nil {
 		return nil, err
 	}
