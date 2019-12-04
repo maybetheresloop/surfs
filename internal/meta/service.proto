@@ -38,9 +38,29 @@ message GetVersionResponse {
     uint64 version = 1;
 }
 
+message CrashRequest {
+
+}
+
+message CrashResponse {
+
+}
+
+message RestoreRequest {
+
+}
+
+message RestoreResponse {
+
+}
+
 service MetadataStore {
     rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
     rpc ModifyFile(ModifyFileRequest) returns (ModifyFileResponse);
     rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
     rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+
+    // Used for debugging purposes only.
+    rpc Crash(CrashRequest) returns (CrashResponse);
+
 }

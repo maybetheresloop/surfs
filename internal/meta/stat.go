@@ -1,6 +1,6 @@
 package meta
 
-type stat struct {
+type Stat struct {
 	version  uint64
 	hashList []string
 }

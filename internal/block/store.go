@@ -18,9 +18,16 @@ func init() {
 }
 
 type Store struct {
-	blocks  map[string]datafile
-	engine  engine
+	// Mapping of filename to file blocks.
+	blocks map[string]datafile
+
+	// Key-value engine for storing file metadata.
+	engine engine
+
+	// The data directory for this instance of the metadata store.
 	dataDir string
+
+	// Assigns sequential IDs to blocks in the block store.
 	counter uint64
 }
 
